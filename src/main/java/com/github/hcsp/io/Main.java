@@ -41,9 +41,9 @@ public class Main {
                 //假如这是一个新闻的详情页面，就存入数据库，否则，就什么都不做
                 storeIntoDatabaseIfItIsNewsPage(doc);
                 processedLinks.add(link);
+            } else {
+                //这是我们不感兴趣的。不处理它
             }
-        }else{
-            //这是我们不感兴趣的。不处理它
         }
     }
 
@@ -59,7 +59,7 @@ public class Main {
     }
 
 
-    private static Document httpGetAndParseHtml(String link) {
+    private static Document httpGetAndParseHtml(String link) throws IOException {
         //这是我们感兴趣的，我们只处理新浪站内的链接
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet(link);

@@ -14,57 +14,80 @@ import org.jsoup.nodes.Element;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 public class Main {
+    private static final String USER_NAME = "root";
+    private static final String PASSWORD = "root";
 
-    private static List<String> loadUrlsFromDatabase(Connection connection, String sql) throws SQLException {
-        List<String> results = new ArrayList<>();
+    private static String getNextLink(Connection connection, String sql) throws SQLException {
+        ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            ResultSet resultSet = statement.executeQuery();
+            resultSet = statement.executeQuery();
             while (resultSet.next()) {
-                results.add(resultSet.getString(1));
+                return resultSet.getString(1);
+            }
+        } finally {
+            if (resultSet != null) {
+                resultSet.close();
             }
         }
-        return results;
+        return null;
+    }
+
+    private static String getNextLinkThenDelete(Connection connection) throws SQLException {
+        String link = getNextLink(connection, "select link from LINKS_TO_BE_PROCESSED LIMIT 1");
+        if (link != null) {
+            updateDatebase(connection, link, "DELETE FROM LINKS_TO_BE_PROCESSED where link = ?");
+        }
+        return link;
     }
 
     public static void main(String[] args) throws IOException, SQLException {
-        Connection connection = DriverManager.getConnection("jdbc:h2:file:/Users/jyb/Desktop/hcsp-projects/my-crawler/news","root","root");
+        Connection connection = DriverManager.getConnection("jdbc:h2:file:/Users/jyb/Desktop/hcsp-projects/my-crawler/news", USER_NAME, PASSWORD);
 
-        //待处理的链接池
-        // 从数据库加载即将处理的链接的代码
-        List<String> linkPool = loadUrlsFromDatabase(connection, "select link from LINKS_TO_BE_PROCESSED");
+        String link;
+        // 从数据库中加载下一个链接，如果能加载到，则进行循环
+        while ((link = getNextLinkThenDelete(connection)) != null) {
+            //询问数据库，当前链接是不是已经被处理过了
+            if (isLinkProcessed(connection, link)) {
+                continue;
+            }
+            if (isInterestingLink(link)) {
+                Document doc = httpGetAndParseHtml(link);
+                parseUrlsFromPageAndStoreIntoDatabase(connection, doc);
+                storeIntoDatabaseIfItIsNewsPage(doc);
+                updateDatebase(connection, link, "INSERT INTO LINKS_ALREADY_PROCESSED(link)values (?)");
+            }
+        }
+    }
 
+    private static void parseUrlsFromPageAndStoreIntoDatabase(Connection connection, Document doc) throws SQLException {
+        for (Element aTag : doc.select("a")) {
+            String href = aTag.attr("href");
+            updateDatebase(connection, href, "INSERT INTO LINKS_TO_BE_PROCESSED(link)values (?)");
+        }
+    }
 
-        //已经处理的链接池
-        // 从数据库加载已经处理的链接的代码
-        Set<String> processedLinks = new HashSet<>(loadUrlsFromDatabase(connection, "select link from LINKS_ALREADY_PROCESSED"));
-        try {
-            while (true) {
-                if (linkPool.isEmpty()) {
-                    break;
-                }
-                String link = linkPool.remove(linkPool.size() - 1);
-                //ArrayList从尾部删除更有效率
-                // 每次处理完后，更新数据库
-                if (processedLinks.contains(link)) {
-                    continue;
-                }
-                if (isInterestingLink(link)) {
-                    Document doc = httpGetAndParseHtml(link);
-                    doc.select("a").stream().map(aTag -> aTag.attr("href")).forEach(linkPool::add);
-                    //假如这是一个新闻的详情页面，就存入数据库，否则，就什么都不做
-                    storeIntoDatabaseIfItIsNewsPage(doc);
-                    processedLinks.add(link);
-                } else {
-                    //这是我们不感兴趣的。不处理它
-                }
+    private static boolean isLinkProcessed(Connection connection, String link) throws SQLException {
+        ResultSet resultSet = null;
+        try (PreparedStatement statement = connection.prepareStatement("SELECT LINK LINK_ALREADY_PROCESSED where link = ?")) {
+            statement.setString(1, link);
+            resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                return true;
             }
         } finally {
-            System.out.println("Exit");
+            if (resultSet != null) {
+                resultSet.close();
+            }
+        }
+        return false;
+    }
+
+    private static void updateDatebase(Connection connection, String link, String sql) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, link);
+            statement.executeUpdate();
         }
     }
 
@@ -98,6 +121,7 @@ public class Main {
         }
     }
 
+    // 我们只关心news、sina的，我们要排除登陆页面
     private static boolean isInterestingLink(String link) {
         return isNotLoginPage(link) && isNewsPage(link) || isIndexPage(link);
     }

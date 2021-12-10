@@ -35,9 +35,9 @@ public class Main {
     }
 
     private static String getNextLinkThenDelete(Connection connection) throws SQLException {
-        String link = getNextLink(connection, "select link from LINKS_TO_BE_PROCESSED LIMIT 1");
+        String link = getNextLink(connection, "SELECT LINK FROM LINKS_TO_BE_PROCESSED ");
         if (link != null) {
-            updateDatebase(connection, link, "DELETE FROM LINKS_TO_BE_PROCESSED where link = ?");
+            updateDatebase(connection, link, "DELETE FROM LINKS_TO_BE_PROCESSED WHERE LINK = ?");
         }
         return link;
     }
@@ -53,6 +53,7 @@ public class Main {
                 continue;
             }
             if (isInterestingLink(link)) {
+                System.out.println(link);
                 Document doc = httpGetAndParseHtml(link);
                 parseUrlsFromPageAndStoreIntoDatabase(connection, doc);
                 storeIntoDatabaseIfItIsNewsPage(doc);
@@ -70,7 +71,7 @@ public class Main {
 
     private static boolean isLinkProcessed(Connection connection, String link) throws SQLException {
         ResultSet resultSet = null;
-        try (PreparedStatement statement = connection.prepareStatement("SELECT LINK LINK_ALREADY_PROCESSED where link = ?")) {
+        try (PreparedStatement statement = connection.prepareStatement("select LINK from LINKS_ALREADY_PROCESSED where LINK = ? ")) {
             statement.setString(1, link);
             resultSet = statement.executeQuery();
             while (resultSet.next()) {
@@ -113,8 +114,6 @@ public class Main {
             link = "https:" + link;
         }
         try (CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
-            System.out.println(link);
-            System.out.println(response1.getStatusLine());
             HttpEntity entity1 = response1.getEntity();
             String html = EntityUtils.toString(entity1);
             return Jsoup.parse(html);

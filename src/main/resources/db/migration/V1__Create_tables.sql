@@ -1,19 +1,19 @@
-create table news
+CREATE TABLE NEWS
 (
-    id          bigint primary key auto_increment,
-    title       text,
-    content     text,
-    url         varchar(1000),
-    created_at  timestamp,
-    modified_at timestamp
+    ID          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    TITLE       TEXT,
+    CONTENT     TEXT,
+    URL         VARCHAR(1000),
+    CREATED_AT  TIMESTAMP,
+    MODIFIED_AT TIMESTAMP
 );
 
-create table LINKS_TO_BE_PROCESSED
+CREATE TABLE LINKS_TO_BE_PROCESSED
 (
-    link varchar(1000)
+    LINK VARCHAR(1000)
 );
-create table LINKS_ALREADY_PROCESSED
+CREATE TABLE LINKS_ALREADY_PROCESSED
 (
-    link varchar(1000)
+    LINK VARCHAR(1000)
 )
 

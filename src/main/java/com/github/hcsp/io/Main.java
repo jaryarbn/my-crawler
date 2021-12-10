@@ -102,10 +102,8 @@ public class Main {
             }
         }
     }
-
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification = "Document why this should be ignored here")
     private static Document httpGetAndParseHtml(String link) throws IOException {
-
         //这是我们感兴趣的，我们只处理新浪站内的链接
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet(link);
@@ -119,7 +117,6 @@ public class Main {
             return Jsoup.parse(html);
         }
     }
-
     // 我们只关心news、sina的，我们要排除登陆页面
     private static boolean isInterestingLink(String link) {
         return isNotLoginPage(link) && isNewsPage(link) || isIndexPage(link);

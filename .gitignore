@@ -1,4 +1,5 @@
-compiled class file
+# compiled class file
+
 *.class
 
 # Log file
@@ -27,6 +28,7 @@ compiled class file
 s_err_pid*
 *.iml
 *.swp
+
 *.idea/ 
 /target/
 
